@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
@@ -12,29 +12,99 @@ import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';
 import DialogActions from '@mui/material/DialogActions';
 import Alert from '@mui/material/Alert';
+import CircularProgress from '@mui/material/CircularProgress';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
+import ChatIcon from '@mui/icons-material/Chat';
 import Grid from '@mui/material/Grid';
-import { MOCK_LISTINGS } from '../listingsApi';
+import { getListingById } from '../listingsApi';
+import type { Listing } from '../listingTypes';
+import { useAppSelector } from '../../../app/hooks';
+import apiClient from '../../../services/apiClient';
 
 export function Component() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
 
-  const listing = MOCK_LISTINGS.find((item) => item.id === Number(id)) || MOCK_LISTINGS[0];
-
+  const [listing, setListing] = useState<Listing | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [ordering, setOrdering] = useState(false);
+  const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
+  const [orderError, setOrderError] = useState<string | null>(null);
 
-  const getStatusColor = (status: typeof listing.status) => {
+  useEffect(() => {
+    async function loadItem() {
+      if (id) {
+        setLoading(true);
+        const item = await getListingById(Number(id));
+        setListing(item || null);
+        setLoading(false);
+      }
+    }
+    loadItem();
+  }, [id]);
+
+  const handlePlaceOrder = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    if (!listing) return;
+
+    setOrdering(true);
+    setOrderError(null);
+    setOrderSuccess(null);
+
+    try {
+      await apiClient.post('/orders', {
+        listingId: listing.id,
+        buyerId: user?.id || 1,
+        totalAmount: listing.price,
+        paymentMethod: 'CASH_ON_DELIVERY',
+      });
+      setOrderSuccess('Order placed successfully! Redirecting to orders...');
+      setTimeout(() => {
+        navigate('/orders');
+      }, 1500);
+    } catch (err: any) {
+      setOrderError(err.message || 'Failed to place order. Please try again.');
+    } finally {
+      setOrdering(false);
+    }
+  };
+
+  const handleStartChat = async () => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
+    if (!listing) return;
+    try {
+      await apiClient.post('/conversations', {
+        listingId: listing.id,
+        buyerId: user?.id || 1,
+        sellerId: listing.seller.id,
+      });
+      navigate('/chat');
+    } catch (e) {
+      navigate('/chat');
+    }
+  };
+
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case 'AVAILABLE':
         return 'success';
       case 'PENDING':
+      case 'RESERVED':
         return 'warning';
       case 'SOLD':
         return 'error';
@@ -42,6 +112,25 @@ export function Component() {
         return 'default';
     }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!listing) {
+    return (
+      <Container maxWidth="lg" sx={{ py: 6 }}>
+        <Alert severity="error">Listing not found.</Alert>
+        <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/')} sx={{ mt: 2 }}>
+          Back to Listings
+        </Button>
+      </Container>
+    );
+  }
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -53,6 +142,18 @@ export function Component() {
       >
         Back to Listings
       </Button>
+
+      {orderSuccess && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          {orderSuccess}
+        </Alert>
+      )}
+
+      {orderError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {orderError}
+        </Alert>
+      )}
 
       <Grid container spacing={4}>
         {/* Left Column: Product Gallery */}
@@ -74,7 +175,7 @@ export function Component() {
               src={
                 listing.images[selectedImageIndex] ||
                 listing.images[0] ||
-                'https://via.placeholder.com/600x400?text=UniMart+Item'
+                'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'
               }
               alt={listing.title}
               sx={{
@@ -164,8 +265,34 @@ export function Component() {
 
             <Divider sx={{ my: 1 }} />
 
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                color="primary"
+                size="large"
+                disabled={listing.status === 'SOLD' || ordering}
+                startIcon={<ShoppingCartIcon />}
+                onClick={handlePlaceOrder}
+                sx={{ flex: 1, py: 1.2, borderRadius: 2, fontWeight: 700 }}
+              >
+                {ordering ? 'Placing Order...' : listing.status === 'SOLD' ? 'Item Sold' : 'Place Order'}
+              </Button>
+
+              <Button
+                variant="outlined"
+                color="primary"
+                size="large"
+                startIcon={<ChatIcon />}
+                onClick={handleStartChat}
+                sx={{ py: 1.2, borderRadius: 2, fontWeight: 700 }}
+              >
+                Chat
+              </Button>
+            </Box>
+
             {/* Seller Info Card */}
-            <Paper elevation={1} sx={{ p: 2.5, borderRadius: 3, bgcolor: 'grey.50', border: 1, borderColor: 'grey.200' }}>
+            <Paper elevation={1} sx={{ p: 2.5, mt: 1, borderRadius: 3, bgcolor: 'grey.50', border: 1, borderColor: 'grey.200' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                 <AccountCircleIcon sx={{ fontSize: 44, color: 'primary.main' }} />
                 <Box>
@@ -182,16 +309,14 @@ export function Component() {
               </Box>
 
               <Button
-                variant="contained"
+                variant="text"
                 color="primary"
                 fullWidth
-                size="large"
-                disabled={listing.status === 'SOLD'}
                 startIcon={<EmailIcon />}
                 onClick={() => setContactDialogOpen(true)}
-                sx={{ py: 1.2, borderRadius: 2, fontWeight: 700 }}
+                sx={{ fontWeight: 700 }}
               >
-                {listing.status === 'SOLD' ? 'Item Sold' : 'Contact Seller'}
+                View Seller Contact Details
               </Button>
             </Paper>
           </Box>
@@ -259,4 +384,3 @@ export function Component() {
 }
 
 export default Component;
-

@@ -1,10 +1,21 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { AuthState, User } from './authTypes';
 
+const savedToken = localStorage.getItem('unimart_token');
+const savedUserStr = localStorage.getItem('unimart_user');
+let savedUser: User | null = null;
+if (savedUserStr) {
+  try {
+    savedUser = JSON.parse(savedUserStr);
+  } catch (e) {
+    savedUser = null;
+  }
+}
+
 const initialState: AuthState = {
-  user: null,
-  token: null,
-  isAuthenticated: false,
+  user: savedUser,
+  token: savedToken,
+  isAuthenticated: !!savedToken && !!savedUser,
   loading: false,
   error: null,
 };
@@ -21,12 +32,16 @@ export const authSlice = createSlice({
       state.token = action.payload.token;
       state.isAuthenticated = true;
       state.error = null;
+      localStorage.setItem('unimart_token', action.payload.token);
+      localStorage.setItem('unimart_user', JSON.stringify(action.payload.user));
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
       state.error = null;
+      localStorage.removeItem('unimart_token');
+      localStorage.removeItem('unimart_user');
     },
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.loading = action.payload;

@@ -8,8 +8,8 @@ import lk.ac.kln.unimart_backend.auth.entity.UserRole;
 
 public class UserCreateRequest {
 
-    @NotBlank(message = "University email is required")
-    @Email(message = "University email must be a valid email address")
+    @NotBlank(message = "Email address is required")
+    @Email(message = "Must be a valid email address")
     private String universityEmail;
 
     @NotBlank(message = "Password hash is required")

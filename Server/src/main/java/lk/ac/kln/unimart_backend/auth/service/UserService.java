@@ -14,20 +14,24 @@ import lk.ac.kln.unimart_backend.auth.entity.User;
 import lk.ac.kln.unimart_backend.auth.repository.UserRepository;
 import lk.ac.kln.unimart_backend.common.api.ResourceNotFoundException;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 @Service
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
     public UserResponse createUser(UserCreateRequest request) {
         User user = new User();
         user.setUniversityEmail(request.getUniversityEmail().trim());
-        user.setPasswordHash(request.getPasswordHash());
+        user.setPasswordHash(passwordEncoder.encode(request.getPasswordHash()));
         user.setFullName(request.getFullName().trim());
         user.setRole(request.getRole());
         user.setEmailVerified(false);
@@ -53,7 +57,9 @@ public class UserService {
     public UserResponse updateUser(Long id, UserUpdateRequest request) {
         User user = findUserOrThrow(id);
         user.setUniversityEmail(request.getUniversityEmail().trim());
-        user.setPasswordHash(request.getPasswordHash());
+        if (request.getPasswordHash() != null && !request.getPasswordHash().isEmpty()) {
+            user.setPasswordHash(passwordEncoder.encode(request.getPasswordHash()));
+        }
         user.setFullName(request.getFullName().trim());
         user.setRole(request.getRole());
         user.setEmailVerified(request.getEmailVerified());

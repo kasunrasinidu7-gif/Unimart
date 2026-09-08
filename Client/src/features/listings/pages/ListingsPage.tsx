@@ -1,24 +1,39 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Container from '@mui/material/Container';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
 import Grid from '@mui/material/Grid';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import ListingCard from '../components/ListingCard';
 import ListingFilter from '../components/ListingFilter';
-import { MOCK_LISTINGS } from '../listingsApi';
-import type { ListingCategory } from '../listingTypes';
+import { getListings } from '../listingsApi';
+import type { Listing, ListingCategory } from '../listingTypes';
 import { useNavigate } from 'react-router-dom';
+import { useAppSelector } from '../../../app/hooks';
 
 export function Component() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAppSelector((state) => state.auth);
+  const [listings, setListings] = useState<Listing[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<ListingCategory | 'All'>('All');
 
+  useEffect(() => {
+    async function loadData() {
+      setLoading(true);
+      const data = await getListings();
+      setListings(data);
+      setLoading(false);
+    }
+    loadData();
+  }, []);
+
   const filteredListings = useMemo(() => {
-    return MOCK_LISTINGS.filter((listing) => {
+    return listings.filter((listing) => {
       const matchesSearch =
         listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         listing.description.toLowerCase().includes(searchQuery.toLowerCase());
@@ -26,7 +41,7 @@ export function Component() {
         selectedCategory === 'All' || listing.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
-  }, [searchQuery, selectedCategory]);
+  }, [listings, searchQuery, selectedCategory]);
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
@@ -54,7 +69,7 @@ export function Component() {
         <Button
           variant="contained"
           size="large"
-          onClick={() => navigate('/login')}
+          onClick={() => navigate(isAuthenticated ? '/listings/new' : '/login')}
           sx={{
             bgcolor: 'white',
             color: 'primary.main',
@@ -75,7 +90,11 @@ export function Component() {
       />
 
       {/* Listings Grid */}
-      {filteredListings.length === 0 ? (
+      {loading ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }}>
+          <CircularProgress />
+        </Box>
+      ) : filteredListings.length === 0 ? (
         <Alert severity="info" sx={{ borderRadius: 2 }}>
           No listings found matching your search criteria. Try adjusting your filters.
         </Alert>
@@ -93,4 +112,3 @@ export function Component() {
 }
 
 export default Component;
-

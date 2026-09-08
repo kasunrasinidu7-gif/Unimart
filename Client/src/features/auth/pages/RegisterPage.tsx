@@ -2,8 +2,8 @@ import Container from '@mui/material/Container';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Box from '@mui/material/Box';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import LoginForm from '../components/LoginForm';
+import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined';
+import RegisterForm from '../components/RegisterForm';
 
 export function Component() {
   return (
@@ -23,21 +23,20 @@ export function Component() {
             mb: 2,
           }}
         >
-          <LockOutlinedIcon />
+          <PersonAddOutlinedIcon />
         </Box>
 
         <Typography variant="h5" component="h1" gutterBottom color="primary.main" sx={{ fontWeight: 'bold' }}>
-          Student Sign In
+          Student Registration
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Access your UniMart account with your email credentials
+          Create a UniMart account using your university credentials
         </Typography>
 
-        <LoginForm />
+        <RegisterForm />
       </Paper>
     </Container>
   );
 }
 
 export default Component;
-

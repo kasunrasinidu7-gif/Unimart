@@ -1,19 +1,21 @@
 import type { Listing } from './listingTypes';
+import apiClient from '../../services/apiClient';
 
-/**
- * Mock listings dataset for development and initial UI presentation.
- * Adheres strictly to the client-only requirement until API integration in later steps.
- */
+export interface Category {
+  id: number;
+  name: string;
+  active: boolean;
+}
+
 export const MOCK_LISTINGS: Listing[] = [
   {
     id: 1,
     title: 'Database Management Systems 8th Edition',
-    description: 'Comprehensive textbook used in Level 2 Information Technology courses. Excellent condition with highlighted key sections and practice exercises.',
+    description: 'Comprehensive textbook used in Level 2 Information Technology courses. Excellent condition with highlighted key sections.',
     price: 3500,
     category: 'Textbooks',
     images: [
       'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80',
-      'https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=600&q=80',
     ],
     seller: {
       id: 101,
@@ -64,7 +66,6 @@ export const MOCK_LISTINGS: Listing[] = [
       fullName: 'Sahan Silva',
       universityEmail: 'sahan-im21012@kln.ac.lk',
       department: 'Department of Chemistry',
-      phone: '+94 76 555 1212',
       joinedDate: 'Feb 2024',
     },
     status: 'AVAILABLE',
@@ -72,81 +73,116 @@ export const MOCK_LISTINGS: Listing[] = [
     createdAt: '2026-08-05',
     location: 'Main University Gate',
   },
-  {
-    id: 4,
-    title: 'Casio Scientific Calculator fx-991EX',
-    description: 'Standard scientific calculator required for engineering and statistics courses.',
-    price: 4500,
-    category: 'Electronics',
-    images: [
-      'https://images.unsplash.com/photo-1594980596870-8aa52a78d8cd?auto=format&fit=crop&w=600&q=80',
-    ],
-    seller: {
-      id: 104,
-      fullName: 'Dilini Jayawardena',
-      universityEmail: 'dilini-im21099@kln.ac.lk',
-      department: 'Department of Physics',
-      joinedDate: 'May 2024',
-    },
-    status: 'PENDING',
-    condition: 'Brand New',
-    createdAt: '2026-08-07',
-    location: 'Science Library',
-  },
-  {
-    id: 5,
-    title: 'University Lab Coat (Size M)',
-    description: 'White cotton lab coat required for chemistry and microbiology laboratory practicals.',
-    price: 1500,
-    category: 'Clothing',
-    images: [
-      'https://images.unsplash.com/photo-1584820927498-cfe5211fd8bf?auto=format&fit=crop&w=600&q=80',
-    ],
-    seller: {
-      id: 105,
-      fullName: 'Ruwan Gunasekara',
-      universityEmail: 'ruwan-im21034@kln.ac.lk',
-      department: 'Department of Microbiology',
-      joinedDate: 'Jun 2024',
-    },
-    status: 'SOLD',
-    condition: 'Good',
-    createdAt: '2026-07-28',
-    location: 'Faculty Canteen',
-  },
-  {
-    id: 6,
-    title: 'A4 Graphic Sketchbook & Marker Set',
-    description: 'Set of 80 GSM A4 sketch paper notebook along with dual-tip alcohol art markers.',
-    price: 1200,
-    category: 'Stationery',
-    images: [
-      'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=600&q=80',
-    ],
-    seller: {
-      id: 106,
-      fullName: 'Amaya Wickramasinghe',
-      universityEmail: 'amaya-im21077@kln.ac.lk',
-      department: 'Department of Fine Arts',
-      joinedDate: 'Jul 2024',
-    },
-    status: 'AVAILABLE',
-    condition: 'Brand New',
-    createdAt: '2026-08-08',
-    location: 'Student Complex',
-  },
 ];
 
-/**
- * Placeholder API function to get all mock listings.
- */
-export async function getMockListings(): Promise<Listing[]> {
+export async function getListings(): Promise<Listing[]> {
+  try {
+    const data = await apiClient.get<any[]>('/listings');
+    if (Array.isArray(data) && data.length > 0) {
+      return data.map((item) => ({
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        price: Number(item.price),
+        category: (item.categoryName || 'Other') as any,
+        images: item.images && item.images.length > 0
+          ? item.images.map((img: any) => img.imageUrl || img)
+          : ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'],
+        seller: {
+          id: item.sellerId || 1,
+          fullName: item.sellerName || 'University Student',
+          universityEmail: item.sellerEmail || 'student@kln.ac.lk',
+          department: 'University Campus',
+          joinedDate: '2026',
+        },
+        status: item.status || 'AVAILABLE',
+        condition: 'Good',
+        createdAt: item.createdAt ? String(item.createdAt).substring(0, 10) : '2026-08-01',
+        location: 'University Campus',
+      }));
+    }
+  } catch (err) {
+    console.warn('Backend API request failed, falling back to local demo listings data:', err);
+  }
   return MOCK_LISTINGS;
 }
 
-/**
- * Placeholder API function to get a single listing by ID.
- */
-export async function getMockListingById(id: number): Promise<Listing | undefined> {
+export async function getListingById(id: number): Promise<Listing | undefined> {
+  try {
+    const item = await apiClient.get<any>(`/listings/${id}`);
+    if (item && item.id) {
+      return {
+        id: item.id,
+        title: item.title,
+        description: item.description || '',
+        price: Number(item.price),
+        category: (item.categoryName || 'Other') as any,
+        images: item.images && item.images.length > 0
+          ? item.images.map((img: any) => img.imageUrl || img)
+          : ['https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=600&q=80'],
+        seller: {
+          id: item.sellerId || 1,
+          fullName: item.sellerName || 'University Student',
+          universityEmail: item.sellerEmail || 'student@kln.ac.lk',
+          department: 'University Campus',
+          joinedDate: '2026',
+        },
+        status: item.status || 'AVAILABLE',
+        condition: 'Good',
+        createdAt: item.createdAt ? String(item.createdAt).substring(0, 10) : '2026-08-01',
+        location: 'University Campus',
+      };
+    }
+  } catch (err) {
+    console.warn(`Backend fetch failed for listing #${id}, using fallback data:`, err);
+  }
   return MOCK_LISTINGS.find((item) => item.id === id);
+}
+
+export async function getCategories(): Promise<Category[]> {
+  try {
+    const categories = await apiClient.get<Category[]>('/categories');
+    if (Array.isArray(categories) && categories.length > 0) {
+      return categories;
+    }
+  } catch (err) {
+    console.warn('Failed to fetch categories from backend:', err);
+  }
+  return [
+    { id: 1, name: 'Textbooks', active: true },
+    { id: 2, name: 'Electronics', active: true },
+    { id: 3, name: 'Furniture', active: true },
+    { id: 4, name: 'Clothing', active: true },
+    { id: 5, name: 'Stationery', active: true },
+  ];
+}
+
+export async function createListing(payload: {
+  sellerId: number;
+  categoryId: number;
+  title: string;
+  description: string;
+  price: number;
+  imageUrl?: string;
+}) {
+  const response = await apiClient.post('/listings', {
+    sellerId: payload.sellerId,
+    categoryId: payload.categoryId,
+    title: payload.title,
+    description: payload.description,
+    price: payload.price,
+  });
+
+  if (response && response.id && payload.imageUrl) {
+    try {
+      await apiClient.post(`/listings/${response.id}/images`, {
+        imageUrl: payload.imageUrl,
+        sortOrder: 1,
+      });
+    } catch (e) {
+      console.error('Failed to attach image to listing:', e);
+    }
+  }
+
+  return response;
 }
