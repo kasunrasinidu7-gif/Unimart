@@ -1,3 +1,41 @@
 spring:
   application:
     name: unimart-backend
+
+  datasource:
+    url: ${DB_URL:jdbc:mysql://127.0.0.1:3306/unimart}
+    username: ${DB_USERNAME:unimart_app}
+    password: ${DB_PASSWORD:ChangeThisLocalPassword123!}
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:10}
+      minimum-idle: ${DB_MIN_IDLE:2}
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # Flyway owns the schema; Hibernate only checks it matches
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+jwt:
+  secret: ${JWT_SECRET:UnimartVeryStrongSecretKeyForLocalDevelopment123!}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  issuer: ${JWT_ISSUER:unimart-backend}
+
+server:
+  port: ${SERVER_PORT:8081}
+  error:
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
